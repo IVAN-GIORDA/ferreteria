@@ -1,5 +1,5 @@
 ================================================================================
-SISTEMA DE CONTROL DE STOCK, MAPA INTERACTIVO Y VENTAS - FERRETERÍA ARGENTINA
+SISTEMA DE CONTROL DE STOCK, MAPA INTERACTIVO Y VENTAS - FERRETERÍA EL GAUCHITO
 ================================================================================
 
 ¡HOLA! Tu sistema ya está completamente listo en esta carpeta.

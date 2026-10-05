@@ -1753,7 +1753,7 @@ function shareFaltantesByWhatsApp() {
     return;
   }
 
-  let msg = `*PEDIDO DE REPOSICIÓN - FERRETERÍA EL TORNILLO*\n`;
+  let msg = `*PEDIDO DE REPOSICIÓN - FERRETERÍA EL GAUCHITO*\n`;
   msg += `_Fecha: ${new Date().toLocaleDateString('es-AR')}_\n\n`;
 
   faltantes.forEach((art, idx) => {
@@ -2898,7 +2898,7 @@ function showReceiptModal(saleData) {
 
   paper.innerHTML = `
     <div style="text-align:center; border-bottom:1px dashed #000; padding-bottom:8px; margin-bottom:8px;">
-      <h2 style="font-size:16px; font-weight:bold; margin:0;">FERRETERÍA EL TORNILLO</h2>
+      <h2 style="font-size:16px; font-weight:bold; margin:0;">FERRETERÍA EL GAUCHITO</h2>
       <p style="margin:2px 0; font-size:11px;">Av. Principal 1234 - Tel: 11-4567-8900</p>
       <p style="margin:2px 0; font-size:11px;">IVA Responsable Inscripto</p>
       <div style="margin-top:4px; font-weight:bold; border:1px solid #000; padding:2px;">
@@ -2936,7 +2936,7 @@ function showReceiptModal(saleData) {
 
   // Botón Compartir por WhatsApp
   document.getElementById('btn-share-whatsapp').onclick = () => {
-    let msg = `*FERRETERÍA EL TORNILLO*\n`;
+    let msg = `*FERRETERÍA EL GAUCHITO*\n`;
     msg += `_${saleData.isQuote ? 'Presupuesto' : 'Detalle de Compra'} N° ${saleData.id}_\n\n`;
     saleData.items.forEach(it => {
       msg += `• *${it.quantity}x* ${it.name} (${it.variant}) = ${PriceEngine.formatARS(it.subtotal)}\n`;
