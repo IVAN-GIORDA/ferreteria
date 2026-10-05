@@ -1,0 +1,19 @@
+Codigo,Codigo_Barras,Nombre,Familia,Medida,Unidad,Costo,Margen,IVA,Stock_Actual,Stock_Minimo,Caja_Codigo,Caja_Nombre,Estante_Codigo,Categoria
+BUL-HEX-141,7791234567011,Bulón Hexagonal G2,Bulonería y Tornillos,1/4 x 1 pulgada,unid,35.00,60,21,240,100,CAJA-0001,Bulones Hexagonales Acero 1/4,EST-BULONES,Bulonería
+BUL-HEX-1415,7791234567028,Bulón Hexagonal G2,Bulonería y Tornillos,1/4 x 1-1/2 pulgada,unid,48.00,60,21,85,100,CAJA-0001,Bulones Hexagonales Acero 1/4,EST-BULONES,Bulonería
+BUL-HEX-5162,7791234567035,Bulón Hexagonal G2,Bulonería y Tornillos,5/16 x 2 pulgadas,unid,85.00,55,21,150,80,CAJA-0002,Bulones Hexagonales Acero 5/16,EST-BULONES,Bulonería
+TUE-HEX-14,7791234567042,Tuerca Hexagonal Zincada,Bulonería y Tornillos,1/4 pulgada,unid,15.00,70,21,450,200,CAJA-0003,Tuercas y Arandelas Zincadas 1/4,EST-BULONES,Bulonería
+ARA-PLA-14,7791234567049,Arandela Plana Zincada,Bulonería y Tornillos,1/4 pulgada,unid,8.50,80,21,600,200,CAJA-0003,Tuercas y Arandelas Zincadas 1/4,EST-BULONES,Bulonería
+TOR-AUTO-T1,7791234567051,Tornillo Autoperforante T1 Aguja,Bulonería y Tornillos,8 x 1/2 pulgada,unid,12.00,65,21,800,300,CAJA-0004,Tornillos Autoperforantes T1 y T2,EST-07,Fijaciones
+TOR-AUTO-T2,7791234567052,Tornillo Autoperforante T2 Mecha,Bulonería y Tornillos,8 x 1 pulgada,unid,16.50,65,21,550,250,CAJA-0004,Tornillos Autoperforantes T1 y T2,EST-07,Fijaciones
+COD-TERMO-20,7791234567059,Codo Termofusión 90° Agua,Termofusión y Caños,20 mm,unid,420.00,50,21,65,40,CAJA-0005,Codos Termofusión 20mm y 25mm 90°,EST-CODOS,Plomería
+COD-TERMO-25,7791234567066,Codo Termofusión 90° Agua,Termofusión y Caños,25 mm,unid,610.00,50,21,18,30,CAJA-0005,Codos Termofusión 20mm y 25mm 90°,EST-CODOS,Plomería
+CUP-TERMO-20,7791234567067,Cupla Unión Termofusión,Termofusión y Caños,20 mm,unid,380.00,50,21,90,30,CAJA-0006,Cuplas y Te Termofusión 20mm,EST-CODOS,Plomería
+TEE-TERMO-20,7791234567068,Te Termofusión 90° Igual,Termofusión y Caños,20 mm,unid,520.00,50,21,45,25,CAJA-0006,Cuplas y Te Termofusión 20mm,EST-CODOS,Plomería
+TAR-SX-6,7791234567073,Tarugo Nylon Fischer SX c/tope,Fijaciones,N° 6,unid,28.00,65,21,380,150,CAJA-0007,Tarugos Fischer SX con tope N° 6 y 8,EST-04,Fijaciones
+TAR-SX-8,7791234567074,Tarugo Nylon Fischer SX c/tope,Fijaciones,N° 8,unid,36.00,65,21,290,150,CAJA-0007,Tarugos Fischer SX con tope N° 6 y 8,EST-04,Fijaciones
+DIS-CORTE-115,7791234567080,Disco de Corte Fino para Metal,Herramientas,115 x 1.0 x 22.2 mm,unid,950.00,45,21,120,50,CAJA-0008,Discos de Corte para Amoladora 115mm,EST-05,Abrasivos
+CIN-AISLA-10M,7791234567097,Cinta Aisladora PVC Negra,Electricidad,10 metros Tacsa,unid,780.00,40,21,40,25,CAJA-0009,Cintas Aisladoras y Teflón,EST-12,Electricidad
+CIN-TEFLON-34,7791234567098,Cinta Selladora Teflón Alta Densidad,Plomería,3/4 x 10 metros,unid,620.00,45,21,55,20,CAJA-0009,Cintas Aisladoras y Teflón,EST-12,Plomería
+PIN-UNIV-8,7791234567100,Pinza Universal Aislada 1000V,Herramientas,8 pulgadas (200mm),unid,8500.00,40,21,15,5,CAJA-0010,Herramientas de Mano en Promoción,EST-ENTRADA,Herramientas
+ALAM-GALV-100,7791234567103,Alambre Galvanizado Rollo,Agro y Jardín,Rollo 100m Calibre 14,rollo,5200.00,35,10.5,12,10,CAJA-0010,Herramientas de Mano en Promoción,EST-ENTRADA,Agro

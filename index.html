@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sistema Ferretería - Stock, Mapa & Ventas</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Html5-Qrcode para escaneo con cámara del celular -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <!-- SheetJS para importar y exportar Excel (.xlsx y .csv) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- QRious para generar códigos QR ultra livianos y offline (local + CDN) -->
+  <script src="qrious.min.js"></script>
+  <script>
+    if (typeof QRious === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"><\/script>');
+    }
+  </script>
+
+  <!-- Supabase JS Client para sincronización en la nube -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Estilos propios -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased select-none md:select-auto">
+
+  <!-- ============================================================
+       BARRA SUPERIOR (HEADER)
+       ============================================================ -->
+  <header class="bg-brand-900 text-white shadow-md sticky top-0 z-40 border-b border-brand-800">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2">
+      
+      <!-- Logo y Nombre del Local -->
+      <div class="flex items-center gap-2.5">
+        <div class="bg-amber-400 text-brand-950 p-1.5 rounded-lg shadow font-black text-xl flex items-center justify-center">
+          <i data-lucide="wrench" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg leading-tight tracking-wide flex items-center gap-1.5">
+            <span>Ferretería El Tornillo</span>
+            <span class="text-xs font-normal text-brand-200 hidden sm:inline">| Control & Ventas</span>
+          </h1>
+          <div class="flex items-center gap-2 text-xs">
+            <span id="cloud-status-badge" class="inline-flex items-center gap-1 text-emerald-300 font-medium">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="cloud-status-text">Modo Local (Listo)</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones Rápidas del Header -->
+      <div class="flex items-center gap-1.5 sm:gap-3">
+        <!-- Botón Escanear Cámara Rápido -->
+        <button id="btn-quick-scan" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-brand-950 font-bold px-3 py-1.5 rounded-lg shadow text-xs sm:text-sm transition-all">
+          <i data-lucide="qr-code" class="w-4 h-4"></i>
+          <span class="hidden xs:inline">Escanear</span>
+        </button>
+
+        <!-- Botón de Usuario y Login -->
+        <button id="btn-open-login" class="flex items-center gap-1.5 bg-brand-800 hover:bg-brand-700 border border-brand-700 px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer">
+          <i id="role-icon" data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+          <span id="role-label" class="font-semibold text-emerald-300">Dueño</span>
+          <span class="text-[10px] text-slate-300 bg-brand-950/70 px-1.5 py-0.5 rounded ml-0.5">Salir</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Navegación por Pestañas (Tabs) Scrollable en Móvil -->
+    <nav class="bg-brand-950 border-t border-brand-800/80 px-2 overflow-x-auto no-scrollbar">
+      <div class="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 py-1 min-w-max text-xs sm:text-sm">
+        <button class="nav-tab active px-3 py-1.5 rounded-md font-semibold text-white bg-brand-700/80 flex items-center gap-1.5 transition-all cursor-pointer" data-tab="tab-mapa" onclick="switchTab('tab-mapa')">
+          <i data-lucide="map" class="w-4 h-4 text-amber-400"></i> Mapa del Local
+        </button>
+        <button class="nav-tab px-3 py-1.5 rounded-md font-medium text-slate-300 hover:text-white hover:bg-brand-800/60 flex items-center gap-1.5 transition-all cursor-pointer" data-tab="tab-stock" onclick="switchTab('tab-stock')">
+          <i data-lucide="boxes" class="w-4 h-4 text-emerald-400"></i> Stock & Cajas
+          <span id="badge-alert-count" class="hidden bg-rose-500 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
+        </button>
+        <button class="nav-tab px-3 py-1.5 rounded-md font-medium text-slate-300 hover:text-white hover:bg-brand-800/60 flex items-center gap-1.5 transition-all cursor-pointer" data-tab="tab-ventas" onclick="switchTab('tab-ventas')">
+          <i data-lucide="shopping-cart" class="w-4 h-4 text-cyan-400"></i> Ventas & Caja
+        </button>
+        <button class="nav-tab px-3 py-1.5 rounded-md font-medium text-slate-300 hover:text-white hover:bg-brand-800/60 flex items-center gap-1.5 transition-all cursor-pointer" data-tab="tab-dashboard" onclick="switchTab('tab-dashboard')">
+          <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i> Dashboard Ventas
+        </button>
+        <button class="nav-tab px-3 py-1.5 rounded-md font-medium text-slate-300 hover:text-white hover:bg-brand-800/60 flex items-center gap-1.5 transition-all cursor-pointer" data-tab="tab-precios" onclick="switchTab('tab-precios')">
+          <i data-lucide="tags" class="w-4 h-4 text-yellow-400"></i> Precios & IVA
+        </button>
+        <button class="nav-tab px-3 py-1.5 rounded-md font-medium text-slate-300 hover:text-white hover:bg-brand-800/60 flex items-center gap-1.5 transition-all cursor-pointer" data-tab="tab-etiquetas" onclick="switchTab('tab-etiquetas')">
+          <i data-lucide="printer" class="w-4 h-4 text-purple-400"></i> Imprimir QR
+        </button>
+        <button class="nav-tab px-3 py-1.5 rounded-md font-medium text-slate-300 hover:text-white hover:bg-brand-800/60 flex items-center gap-1.5 transition-all cursor-pointer" data-tab="tab-importar" onclick="switchTab('tab-importar')">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4 text-green-400"></i> Importar Excel
+        </button>
+        <button class="nav-tab px-3 py-1.5 rounded-md font-medium text-slate-300 hover:text-white hover:bg-brand-800/60 flex items-center gap-1.5 transition-all cursor-pointer" data-tab="tab-config" onclick="switchTab('tab-config')">
+          <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i> Configuración
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ============================================================
+       CONTENEDOR PRINCIPAL DE CONTENIDOS
+       ============================================================ -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4">
+
+    <!-- ------------------------------------------------------------
+         1. TAB: MAPA INTERACTIVO DEL LOCAL
+         ------------------------------------------------------------ -->
+    <section id="tab-mapa" class="tab-content active space-y-3">
+      
+      <!-- Barra de herramientas del Mapa -->
+      <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        <!-- Buscador para resaltar estante -->
+        <div class="relative flex-1 min-w-[260px]">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input type="text" id="map-search-input" placeholder="Buscar bulón, tornillo, caja o estante para ubicar..." 
+                 class="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+          <button id="btn-clear-map-search" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Controles de Zoom y Centrado -->
+        <div class="flex items-center gap-1.5">
+          <button id="btn-zoom-in" class="p-2 bg-slate-100 hover:bg-slate-200 active:scale-95 rounded-lg border border-slate-300 text-slate-700" title="Acercar">
+            <i data-lucide="zoom-in" class="w-4 h-4"></i>
+          </button>
+          <button id="btn-zoom-out" class="p-2 bg-slate-100 hover:bg-slate-200 active:scale-95 rounded-lg border border-slate-300 text-slate-700" title="Alejar">
+            <i data-lucide="zoom-out" class="w-4 h-4"></i>
+          </button>
+          <button id="btn-zoom-reset" class="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 rounded-lg border border-slate-300 text-slate-700 text-xs font-semibold flex items-center gap-1" title="Ver Local Completo">
+            <i data-lucide="maximize" class="w-4 h-4"></i> Reset
+          </button>
+
+          <!-- Botón Modo Edición (Solo Dueño) -->
+          <div id="owner-map-controls" class="inline-flex items-center">
+            <button id="btn-toggle-map-edit" class="ml-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition-all">
+              <i data-lucide="edit-3" class="w-4 h-4 text-amber-400"></i>
+              <span id="map-edit-btn-text">Modo Edición</span>
+            </button>
+            <button id="btn-add-shelf" class="hidden ml-1 px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+              <i data-lucide="plus" class="w-4 h-4"></i> Agregar Estante
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leyenda de colores del mapa -->
+      <div class="flex flex-wrap items-center gap-3 text-xs text-slate-600 px-1">
+        <span class="font-semibold text-slate-800">Estado de estantes:</span>
+        <span class="inline-flex items-center gap-1"><span class="w-3.5 h-3.5 rounded bg-emerald-100 border border-emerald-500 inline-block"></span> Normal</span>
+        <span class="inline-flex items-center gap-1"><span class="w-3.5 h-3.5 rounded bg-amber-100 border border-amber-500 inline-block"></span> Stock Bajo (Alerta)</span>
+        <span class="inline-flex items-center gap-1"><span class="w-3.5 h-3.5 rounded bg-rose-100 border border-rose-500 inline-block"></span> Vacío</span>
+        <span class="inline-flex items-center gap-1"><span class="w-3.5 h-3.5 rounded bg-indigo-100 border border-indigo-400 inline-block"></span> Mostrador / Informativo</span>
+        <span class="inline-flex items-center gap-1"><span class="w-3.5 h-3.5 rounded bg-slate-200 border border-dashed border-slate-400 inline-block"></span> Sin Relevar</span>
+        <span class="inline-flex items-center gap-1"><span class="w-3.5 h-3.5 rounded bg-slate-400 border border-slate-500 inline-block"></span> Inaccesible</span>
+      </div>
+
+      <!-- Alerta cuando hay un estante resaltado -->
+      <div id="search-highlight-banner" class="hidden bg-brand-50 border-l-4 border-brand-600 p-3 rounded-lg flex items-center justify-between text-sm">
+        <div class="flex items-center gap-2">
+          <i data-lucide="map-pin" class="w-5 h-5 text-brand-600 animate-bounce"></i>
+          <div>
+            <span class="font-bold text-brand-900" id="highlight-shelf-name">Estante Resaltado</span>
+            <p class="text-xs text-brand-700" id="highlight-shelf-desc">Caminá hacia el estante titilante en el mapa para encontrar el artículo.</p>
+          </div>
+        </div>
+        <button id="btn-open-highlighted-shelf" class="bg-brand-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-brand-700">
+          Ver Cajas de este Estante
+        </button>
+      </div>
+
+      <!-- Contenedor del Lienzo SVG del Mapa -->
+      <div class="relative bg-white rounded-xl shadow-md border border-slate-300 overflow-hidden h-[620px] sm:h-[680px]">
+        
+        <!-- Indicador de ayuda táctil/mouse -->
+        <div class="absolute bottom-2 left-2 z-10 bg-white/90 backdrop-blur px-2.5 py-1 rounded-md text-[11px] text-slate-500 border border-slate-200 pointer-events-none shadow-sm flex items-center gap-1.5">
+          <i data-lucide="hand" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span>Arrastrá para mover • Ruedita o pellizco para zoom • Tocá un estante</span>
+        </div>
+
+        <!-- Pad Flotante de Flechas para desplazar el mapa en PC y Móvil -->
+        <div class="absolute top-3 right-3 z-20 bg-white/95 backdrop-blur-md rounded-xl p-1.5 shadow-lg border border-slate-200 flex flex-col items-center gap-1 select-none">
+          <button id="btn-pan-up" class="p-1.5 hover:bg-slate-100 active:bg-slate-200 rounded text-slate-700 active:scale-95" title="Mover Arriba">
+            <i data-lucide="chevron-up" class="w-4 h-4"></i>
+          </button>
+          <div class="flex items-center gap-1">
+            <button id="btn-pan-left" class="p-1.5 hover:bg-slate-100 active:bg-slate-200 rounded text-slate-700 active:scale-95" title="Mover Izquierda">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <button id="btn-pan-center" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 active:scale-95 rounded text-slate-800 font-bold text-[10px]" title="Ver Todo el Local">
+              Todo
+            </button>
+            <button id="btn-pan-right" class="p-1.5 hover:bg-slate-100 active:bg-slate-200 rounded text-slate-700 active:scale-95" title="Mover Derecha">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <button id="btn-pan-down" class="p-1.5 hover:bg-slate-100 active:bg-slate-200 rounded text-slate-700 active:scale-95" title="Mover Abajo">
+            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- SVG Map Container interactivo -->
+        <div id="map-viewport" class="map-container w-full h-full">
+          <svg id="store-svg" viewBox="0 0 740 980" class="w-full h-full select-none">
+            <!-- Paredes exteriores y fondo -->
+            <defs>
+              <pattern id="grid-pattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f1f5f9" stroke-width="1" />
+              </pattern>
+            </defs>
+
+            <!-- Grupo que se escala y traslada (Pan & Zoom) -->
+            <g id="map-pan-zoom-group">
+              <!-- Fondo del local -->
+              <rect x="15" y="15" width="710" height="950" fill="#ffffff" stroke="#1e293b" stroke-width="4" rx="4" />
+
+              <!-- Grupo dinámico donde se dibujan todos los estantes y zonas -->
+              <g id="shelves-layer"></g>
+
+              <!-- Puertas fijas en la pared inferior según plano -->
+              <g id="doors-layer">
+                <!-- Puerta izquierda -->
+                <line x1="180" y1="965" x2="280" y2="965" stroke="#94a3b8" stroke-width="6" stroke-dasharray="6 4" />
+                <text x="230" y="945" text-anchor="middle" font-size="12" font-weight="bold" fill="#64748b">Puerta</text>
+
+                <!-- Puerta central con división -->
+                <line x1="435" y1="840" x2="435" y2="965" stroke="#1e293b" stroke-width="4" />
+                <text x="435" y="890" text-anchor="middle" font-size="12" font-weight="bold" fill="#64748b">Puerta</text>
+
+                <!-- Puerta derecha -->
+                <line x1="580" y1="965" x2="660" y2="965" stroke="#94a3b8" stroke-width="6" stroke-dasharray="6 4" />
+                <text x="620" y="945" text-anchor="middle" font-size="12" font-weight="bold" fill="#64748b">Puerta</text>
+              </g>
+
+              <!-- Capa de controles de edición (manijas de redimensionado) -->
+              <g id="edit-handles-layer"></g>
+            </g>
+          </svg>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------
+         2. TAB: STOCK Y CAJAS
+         ------------------------------------------------------------ -->
+    <section id="tab-stock" class="tab-content hidden space-y-4">
+      
+      <!-- Fila superior: Métricas rápidas y Botones -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500 font-medium">Total de Artículos</p>
+          <p id="stat-total-articles" class="text-xl sm:text-2xl font-black text-slate-800">0</p>
+        </div>
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500 font-medium">Total de Cajas</p>
+          <p id="stat-total-boxes" class="text-xl sm:text-2xl font-black text-slate-800">0</p>
+        </div>
+        <div class="bg-white p-3.5 rounded-xl border border-amber-200 bg-amber-50/50 shadow-sm">
+          <p class="text-xs text-amber-700 font-bold">Bajo Stock Mínimo</p>
+          <p id="stat-low-stock" class="text-xl sm:text-2xl font-black text-amber-600">0</p>
+        </div>
+        <div class="bg-white p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 shadow-sm">
+          <p class="text-xs text-emerald-700 font-bold">Cajas Asignadas a Estante</p>
+          <p id="stat-assigned-boxes" class="text-xl sm:text-2xl font-black text-emerald-600">0%</p>
+        </div>
+      </div>
+
+      <!-- Barra de acciones: Búsqueda, Filtros y Nuevos registros -->
+      <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <div class="flex flex-col sm:flex-row gap-2.5 justify-between">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" id="inventory-search-input" placeholder="Buscar por nombre, medida (ej: 1/4 x 2), código EAN o caja..."
+                   class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <select id="inventory-filter-select" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <option value="all">Todos los artículos</option>
+              <option value="low">Solo stock bajo (Alerta)</option>
+              <option value="empty">Sin stock (Agotados)</option>
+            </select>
+
+            <button id="btn-new-box" class="bg-brand-700 hover:bg-brand-800 text-white px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 shadow active:scale-95 transition-all">
+              <i data-lucide="package-plus" class="w-4 h-4"></i>
+              <span class="hidden sm:inline">Nueva Caja</span>
+            </button>
+
+            <button id="btn-new-article" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 shadow active:scale-95 transition-all">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span class="hidden sm:inline">Nuevo Artículo</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Subpestañas: Ver por Artículos vs Ver por Cajas vs Lista de Faltantes -->
+        <div class="flex border-b border-slate-200 text-sm font-medium gap-4 overflow-x-auto">
+          <button id="subtab-articles" onclick="switchStockSubtab('articles')" class="py-2 border-b-2 border-brand-600 text-brand-700 font-bold whitespace-nowrap cursor-pointer">Lista de Artículos</button>
+          <button id="subtab-boxes" onclick="switchStockSubtab('boxes')" class="py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800 whitespace-nowrap cursor-pointer">Lista de Cajas (con QR)</button>
+          <button id="subtab-faltantes" onclick="switchStockSubtab('faltantes')" class="py-2 border-b-2 border-transparent text-slate-500 hover:text-amber-700 flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i> Faltantes & Pedido a Proveedor
+          </button>
+        </div>
+      </div>
+
+      <!-- Contenedor de la lista de Artículos -->
+      <div id="articles-view-container" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-slate-600 font-semibold text-xs border-b border-slate-200 uppercase tracking-wider">
+              <tr>
+                <th class="py-3 px-4">Artículo & Medida</th>
+                <th class="py-3 px-3">Código / EAN</th>
+                <th class="py-3 px-3">Ubicación (Cajas & Estantes)</th>
+                <th class="py-3 px-3 text-right">Precio c/IVA</th>
+                <th class="py-3 px-4 text-center">Stock Total</th>
+                <th class="py-3 px-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-table-body" class="divide-y divide-slate-100">
+              <!-- Se puebla dinámicamente con JavaScript -->
+            </tbody>
+          </table>
+        </div>
+        <div id="inventory-empty-state" class="hidden p-8 text-center text-slate-400">
+          <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+          <p class="font-medium">No se encontraron artículos con ese criterio de búsqueda.</p>
+        </div>
+      </div>
+
+      <!-- Contenedor de la lista de Cajas -->
+      <div id="boxes-view-container" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        <!-- Tarjetas de cajas se pueblan dinámicamente -->
+      </div>
+
+      <!-- Contenedor de Lista de Faltantes & Reposición -->
+      <div id="faltantes-view-container" class="hidden space-y-3">
+        <div class="bg-amber-50 border border-amber-300 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-amber-950 text-base flex items-center gap-2">
+              <i data-lucide="clipboard-list" class="w-5 h-5 text-amber-600"></i> Lista de Artículos Faltantes para Pedido
+            </h3>
+            <p class="text-xs text-amber-800">Muestra los artículos bajo stock mínimo, qué estante reponer y calcula sugerencia de compra.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btn-share-faltantes-whatsapp" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow">
+              <i data-lucide="message-circle" class="w-4 h-4"></i> Pedir por WhatsApp al Proveedor
+            </button>
+            <button id="btn-print-faltantes" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow">
+              <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Lista
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-50 text-slate-600 font-semibold text-xs border-b border-slate-200 uppercase">
+                <tr>
+                  <th class="py-3 px-4">Artículo a Pedir</th>
+                  <th class="py-3 px-3">Estante & Caja donde se repone</th>
+                  <th class="py-3 px-3 text-center">Stock Actual</th>
+                  <th class="py-3 px-3 text-center">Stock Mínimo</th>
+                  <th class="py-3 px-3 text-center">Cant. Sugerida</th>
+                  <th class="py-3 px-3 text-right">Costo Estimado</th>
+                </tr>
+              </thead>
+              <tbody id="faltantes-table-tbody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------
+         3. TAB: VENTAS Y CAJA (PUNTO DE VENTA)
+         ------------------------------------------------------------ -->
+    <section id="tab-ventas" class="tab-content hidden space-y-4">
+      
+      <!-- Subpestañas de Ventas: POS Mostrador vs Historial vs Cta Cte -->
+      <div class="bg-white p-2.5 rounded-xl shadow-sm border border-slate-200 flex border-b text-sm font-medium gap-3 overflow-x-auto">
+        <button id="subtab-pos-active" onclick="switchPOSSubtab('pos')" class="px-3 py-1.5 rounded-lg bg-cyan-50 border border-cyan-300 text-cyan-900 font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+          <i data-lucide="shopping-cart" class="w-4 h-4 text-cyan-600"></i> Mostrador / Cobro
+        </button>
+        <button id="subtab-sales-history" onclick="switchPOSSubtab('history')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+          <i data-lucide="history" class="w-4 h-4 text-slate-500"></i> Historial & Presupuestos
+        </button>
+        <button id="subtab-clients-cc" onclick="switchPOSSubtab('clients')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+          <i data-lucide="users" class="w-4 h-4 text-slate-500"></i> Cuentas Corrientes Clientes
+        </button>
+      </div>
+
+      <!-- Vista 1: Pantalla Principal del Mostrador (POS) -->
+      <div id="pos-main-container" class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        <!-- Columna Izquierda: Búsqueda y Carrito (8 columnas) -->
+        <div class="lg:col-span-8 space-y-3">
+          
+          <!-- Barra rápida de escaneo / ingreso de venta -->
+          <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-2.5 items-center">
+            <div class="relative flex-1 min-w-[200px]">
+              <i data-lucide="barcode" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <input type="text" id="pos-barcode-input" placeholder="Escanear código de barras EAN o buscar artículo..."
+                     class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono">
+            </div>
+            
+            <button id="btn-pos-camera-scan" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3.5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-1.5 shadow active:scale-95">
+              <i data-lucide="camera" class="w-4 h-4"></i> Escanear
+            </button>
+
+            <!-- Lista de Precios activa -->
+            <select id="pos-price-list-select" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+              <option value="mostrador">Lista Mostrador</option>
+              <option value="mayorista">Lista Mayorista (-15%)</option>
+              <option value="gremio">Lista Gremio / Oficio (-10%)</option>
+            </select>
+          </div>
+
+          <!-- Sugerencias de búsqueda rápida POS -->
+          <div id="pos-search-results" class="hidden bg-white rounded-xl shadow-lg border border-slate-200 divide-y divide-slate-100 max-h-60 overflow-y-auto"></div>
+
+          <!-- Tabla del Carrito de la Venta actual -->
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                <i data-lucide="shopping-bag" class="w-4 h-4 text-cyan-600"></i> Detalle de la Venta Actual
+              </h3>
+              <button id="btn-clear-cart" class="text-xs text-rose-600 hover:text-rose-800 font-semibold">Vaciar Carrito</button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-slate-50/70 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
+                  <tr>
+                    <th class="py-2.5 px-3">Artículo</th>
+                    <th class="py-2.5 px-2">Caja de Salida</th>
+                    <th class="py-2.5 px-2 text-center">Cant.</th>
+                    <th class="py-2.5 px-2 text-right">Unitario c/IVA</th>
+                    <th class="py-2.5 px-2 text-center">Desc. %</th>
+                    <th class="py-2.5 px-3 text-right">Subtotal</th>
+                    <th class="py-2.5 px-2 text-center"></th>
+                  </tr>
+                </thead>
+                <tbody id="pos-cart-tbody" class="divide-y divide-slate-100">
+                  <!-- Se puebla dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+
+            <div id="pos-cart-empty" class="p-8 text-center text-slate-400">
+              <i data-lucide="shopping-cart" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
+              <p class="font-medium text-sm">El carrito está vacío.</p>
+              <p class="text-xs text-slate-400">Escaneá un código o buscá un artículo para empezar.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Columna Derecha: Totales, Cliente y Formas de Pago (4 columnas) -->
+        <div class="lg:col-span-4 space-y-3">
+          
+          <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-4">
+            <!-- Datos del Cliente -->
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Cliente</label>
+              <div class="flex gap-2">
+                <select id="pos-client-select" class="flex-1 bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg p-2 focus:ring-2 focus:ring-cyan-500">
+                  <option value="final">Consumidor Final</option>
+                  <!-- Clientes con Cta Cte se agregan aquí -->
+                </select>
+                <button id="btn-add-quick-client" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-300 text-slate-700" title="Nuevo Cliente">
+                  <i data-lucide="user-plus" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Medio de Pago -->
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Forma de Pago</label>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <button class="pay-method-btn active p-2.5 border-2 border-cyan-600 bg-cyan-50 text-cyan-900 rounded-lg font-bold flex flex-col items-center gap-1" data-method="efectivo">
+                  <i data-lucide="banknote" class="w-4 h-4"></i>
+                  <span>Efectivo (-10%)</span>
+                </button>
+                <button class="pay-method-btn p-2.5 border border-slate-200 bg-slate-50 text-slate-700 rounded-lg font-semibold flex flex-col items-center gap-1" data-method="transferencia">
+                  <i data-lucide="smartphone-charging" class="w-4 h-4"></i>
+                  <span>Transferencia</span>
+                </button>
+                <button class="pay-method-btn p-2.5 border border-slate-200 bg-slate-50 text-slate-700 rounded-lg font-semibold flex flex-col items-center gap-1" data-method="debito">
+                  <i data-lucide="credit-card" class="w-4 h-4"></i>
+                  <span>Débito</span>
+                </button>
+                <button class="pay-method-btn p-2.5 border border-slate-200 bg-slate-50 text-slate-700 rounded-lg font-semibold flex flex-col items-center gap-1" data-method="credito">
+                  <i data-lucide="credit-card" class="w-4 h-4"></i>
+                  <span>Crédito (+15%)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Descuento General Adicional -->
+            <div class="flex items-center justify-between text-xs pt-1">
+              <span class="text-slate-600 font-medium">Descuento Global extra:</span>
+              <div class="flex items-center gap-1">
+                <input type="number" id="pos-global-discount-input" value="0" min="0" max="100" class="w-14 text-center bg-slate-50 border border-slate-300 rounded p-1 font-bold text-sm">
+                <span class="font-bold">%</span>
+              </div>
+            </div>
+
+            <!-- Desglose de Totales e IVA -->
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1.5 text-xs">
+              <div class="flex justify-between text-slate-600">
+                <span>Subtotal Neto (sin IVA):</span>
+                <span id="pos-neto-amount" class="font-mono font-medium">$0,00</span>
+              </div>
+              <div class="flex justify-between text-slate-600">
+                <span>IVA Discriminado (21% / 10.5%):</span>
+                <span id="pos-iva-amount" class="font-mono font-medium">$0,00</span>
+              </div>
+              <div id="pos-discount-row" class="hidden flex justify-between text-emerald-600 font-medium">
+                <span>Ajuste Forma de Pago / Desc:</span>
+                <span id="pos-discount-amount" class="font-mono">-$0,00</span>
+              </div>
+              <div class="border-t border-slate-200 pt-2 flex justify-between items-baseline">
+                <span class="text-base font-bold text-slate-900">TOTAL:</span>
+                <span id="pos-total-amount" class="text-2xl font-black text-cyan-700 font-mono">$0,00</span>
+              </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="space-y-2 pt-1">
+              <button id="btn-pos-confirm-sale" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl font-bold text-base shadow-md flex items-center justify-center gap-2 transition-all">
+                <i data-lucide="check-circle" class="w-5 h-5"></i> Confirmar Venta (Descuenta Stock)
+              </button>
+              
+              <div class="grid grid-cols-2 gap-2">
+                <button id="btn-pos-save-quote" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 border border-slate-300">
+                  <i data-lucide="file-text" class="w-4 h-4"></i> Guardar Presupuesto
+                </button>
+                <button id="btn-pos-print-receipt" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 border border-slate-300">
+                  <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Ticket
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Resumen del Día -->
+          <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 text-xs space-y-2">
+            <h4 class="font-bold text-slate-700 flex items-center gap-1.5">
+              <i data-lucide="wallet" class="w-4 h-4 text-emerald-600"></i> Resumen de Caja del Día
+            </h4>
+            <div class="flex justify-between text-slate-600">
+              <span>Total Ventas Hoy:</span>
+              <span id="pos-today-sales" class="font-mono font-bold text-slate-800">$0,00</span>
+            </div>
+            <div class="flex justify-between text-slate-600">
+              <span>Cant. Comprobantes:</span>
+              <span id="pos-today-count" class="font-mono font-semibold">0</span>
+            </div>
+          </div>
+
+      </div>
+
+      <!-- Vista 2: Historial de Ventas & Presupuestos -->
+      <div id="sales-history-container" class="hidden space-y-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                <i data-lucide="history" class="w-5 h-5 text-brand-600"></i> Historial de Operaciones & Presupuestos
+              </h3>
+              <p class="text-xs text-slate-500">Filtrá por fecha, cliente o medio de pago, y convertí presupuestos en ventas con un clic.</p>
+            </div>
+            
+            <!-- Resumen de Ganancia Estimada (Solo visible para Dueño) -->
+            <div id="owner-profit-badge" class="bg-emerald-50 border border-emerald-300 rounded-xl px-4 py-2 text-right">
+              <span class="text-[11px] font-bold text-emerald-800 uppercase block">Ganancia Estimada Filtrada</span>
+              <span id="stat-filtered-profit" class="font-mono font-black text-emerald-700 text-lg">$0,00</span>
+            </div>
+          </div>
+
+          <!-- Filtros de búsqueda en historial -->
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-2 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">Tipo de Comprobante:</label>
+              <select id="hist-filter-type" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium">
+                <option value="all">Todas las operaciones</option>
+                <option value="sales">Solo Ventas Confirmadas</option>
+                <option value="quotes">Solo Presupuestos Pendientes</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">Medio de Pago:</label>
+              <select id="hist-filter-payment" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium">
+                <option value="all">Todos los medios de pago</option>
+                <option value="efectivo">Efectivo</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="debito">Débito</option>
+                <option value="credito">Crédito</option>
+                <option value="corriente">Cuenta Corriente</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">Buscar por Cliente o N°:</label>
+              <input type="text" id="hist-filter-query" placeholder="Juan Pérez o VTA-..." class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+            </div>
+            <div class="flex items-end">
+              <button id="btn-export-sales-excel" class="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold flex items-center justify-center gap-1.5 shadow">
+                <i data-lucide="download" class="w-4 h-4"></i> Exportar a Excel
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-50 text-slate-600 font-semibold text-xs border-b border-slate-200 uppercase">
+                <tr>
+                  <th class="py-3 px-4">N° Comprobante & Fecha</th>
+                  <th class="py-3 px-3">Cliente</th>
+                  <th class="py-3 px-3">Medio de Pago</th>
+                  <th class="py-3 px-3 text-center">Estado</th>
+                  <th class="py-3 px-3 text-right">Total c/IVA</th>
+                  <th class="py-3 px-4 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="sales-history-tbody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vista 3: Cuentas Corrientes y Saldos de Clientes -->
+      <div id="clients-cc-container" class="hidden space-y-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <i data-lucide="book-open" class="w-5 h-5 text-brand-600"></i> Gestión de Cuentas Corrientes de Clientes
+            </h3>
+            <p class="text-xs text-slate-500">Llevá el control de fiados, compras a cuenta y pagos parciales.</p>
+          </div>
+          <button id="btn-create-cc-client" class="bg-brand-700 hover:bg-brand-800 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow">
+            <i data-lucide="user-plus" class="w-4 h-4"></i> Agregar Cliente Nuevo
+          </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-50 text-slate-600 font-semibold text-xs border-b border-slate-200 uppercase">
+                <tr>
+                  <th class="py-3 px-4">Cliente</th>
+                  <th class="py-3 px-3">CUIT / DNI</th>
+                  <th class="py-3 px-3">Teléfono WhatsApp</th>
+                  <th class="py-3 px-3 text-right">Saldo Deudor</th>
+                  <th class="py-3 px-4 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="clients-cc-tbody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ------------------------------------------------------------
+         DASHBOARD DE VENTAS & RENDIMIENTO
+         ------------------------------------------------------------ -->
+    <section id="tab-dashboard" class="tab-content hidden space-y-4">
+      
+      <!-- Barra superior con Filtro de Período y Botones Excel -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-6 h-6 text-emerald-600"></i> Dashboard de Ventas & Reportes
+          </h3>
+          <p class="text-xs text-slate-500">Métricas en tiempo real, métodos de pago, ranking de artículos y descarga de planillas Excel.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Selector de Período -->
+          <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-300">
+            <i data-lucide="calendar" class="w-4 h-4 text-slate-500 ml-1.5"></i>
+            <select id="dash-period-select" class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none pr-2 py-1 cursor-pointer">
+              <option value="hoy">Hoy</option>
+              <option value="7d">Últimos 7 días</option>
+              <option value="mes" selected>Este Mes</option>
+              <option value="30d">Últimos 30 días</option>
+              <option value="todo">Histórico Completo</option>
+            </select>
+          </div>
+
+          <!-- Botón Descargar Ventas en Excel -->
+          <button id="btn-dash-export-excel" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Descargar Ventas a Excel
+          </button>
+
+          <!-- Botón Descargar Plantilla Excel -->
+          <button id="btn-dash-template-excel" class="bg-slate-700 hover:bg-slate-800 active:scale-95 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer" title="Descargar modelo en blanco para cargar artículos">
+            <i data-lucide="download" class="w-4 h-4"></i> Plantilla Artículos
+          </button>
+
+          <!-- Botón Cargar / Importar Excel -->
+          <button id="btn-dash-import-excel" class="bg-brand-700 hover:bg-brand-800 active:scale-95 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer">
+            <i data-lucide="upload-cloud" class="w-4 h-4"></i> Cargar Excel
+          </button>
+        </div>
+      </div>
+
+      <!-- Tarjetas KPI Principales -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        
+        <!-- KPI 1: Total Facturado -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Facturación Total</span>
+            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-3">
+            <span id="dash-kpi-total-sales" class="text-2xl font-black font-mono text-slate-900">$0,00</span>
+            <div class="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+              <span id="dash-kpi-sales-count" class="font-bold text-slate-800">0</span> ventas confirmadas
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI 2: Ticket Promedio -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Ticket Promedio</span>
+            <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-600 flex items-center justify-center">
+              <i data-lucide="receipt" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-3">
+            <span id="dash-kpi-avg-ticket" class="text-2xl font-black font-mono text-cyan-700">$0,00</span>
+            <div class="text-[11px] text-slate-500 mt-1">
+              Promedio por comprobante
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI 3: Ganancia Estimada (Dueño) -->
+        <div id="dash-kpi-profit-card" class="bg-white p-4 rounded-xl shadow-sm border border-emerald-300 bg-gradient-to-br from-white to-emerald-50/50 flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase text-emerald-800 tracking-wider">Ganancia Estimada</span>
+            <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+              <i data-lucide="piggy-bank" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-3">
+            <span id="dash-kpi-total-profit" class="text-2xl font-black font-mono text-emerald-700">$0,00</span>
+            <div class="text-[11px] text-emerald-800 font-semibold mt-1 flex items-center gap-1">
+              Margen promedio: <span id="dash-kpi-profit-margin" class="font-bold">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI 4: Unidades Vendidas & Presupuestos -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Volumen & Presupuestos</span>
+            <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+              <i data-lucide="package" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-3">
+            <span id="dash-kpi-items-sold" class="text-2xl font-black font-mono text-slate-900">0</span> <span class="text-xs font-bold text-slate-500">unidades</span>
+            <div class="text-[11px] text-amber-700 font-semibold mt-1">
+              <span id="dash-kpi-quotes-pending">0</span> presupuestos sin cerrar
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Fila 2: Gráfico de Ventas Diarias + Métodos de Pago -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        
+        <!-- Gráfico Evolución de Ventas -->
+        <div class="lg:col-span-2 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+              <i data-lucide="bar-chart-2" class="w-4 h-4 text-brand-600"></i> Evolución Diaria de Ventas
+            </h4>
+            <span id="dash-chart-range-label" class="text-xs font-semibold text-slate-500">Últimos días</span>
+          </div>
+
+          <!-- Contenedor del Gráfico de Barras -->
+          <div id="dash-chart-container" class="flex-1 min-h-[220px] flex items-end gap-2 pt-6 pb-2 px-2 border-b border-slate-200 overflow-x-auto">
+            <!-- Barras generadas dinámicamente con JavaScript -->
+          </div>
+          <div id="dash-chart-legend" class="pt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+            <span>Inicio del período</span>
+            <span>Hoy</span>
+          </div>
+        </div>
+
+        <!-- Distribución de Medios de Pago -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+          <div class="mb-3">
+            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+              <i data-lucide="pie-chart" class="w-4 h-4 text-cyan-600"></i> Formas de Pago
+            </h4>
+            <p class="text-xs text-slate-500">Distribución de cobros del período seleccionado.</p>
+          </div>
+
+          <div id="dash-payment-methods-list" class="space-y-2.5 flex-1 justify-center flex flex-col">
+            <!-- Lista dinámica de formas de pago -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Fila 3: Top 10 Artículos Más Vendidos + Últimas Operaciones -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- Ranking Top Artículos -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+          <div class="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+              <i data-lucide="award" class="w-4 h-4 text-amber-500"></i> Top Artículos Más Vendidos
+            </h4>
+            <span class="text-xs text-slate-500">Por unidades vendidas</span>
+          </div>
+          <div class="overflow-x-auto flex-1 max-h-[360px]">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 font-bold uppercase text-[10px] sticky top-0">
+                <tr>
+                  <th class="py-2.5 px-3">#</th>
+                  <th class="py-2.5 px-3">Artículo / Variante</th>
+                  <th class="py-2.5 px-3 text-center">Unidades</th>
+                  <th class="py-2.5 px-3 text-right">Recaudado</th>
+                </tr>
+              </thead>
+              <tbody id="dash-top-products-tbody" class="divide-y divide-slate-100">
+                <!-- Se puebla dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Últimas Operaciones Realizadas -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+          <div class="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+              <i data-lucide="clock" class="w-4 h-4 text-brand-600"></i> Últimas Operaciones Realizadas
+            </h4>
+            <button onclick="switchTab('tab-ventas'); switchPOSSubtab('history');" class="text-xs text-brand-700 hover:text-brand-900 font-bold flex items-center gap-1 cursor-pointer">
+              Ver todo el historial <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+          <div class="overflow-x-auto flex-1 max-h-[360px]">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 font-bold uppercase text-[10px] sticky top-0">
+                <tr>
+                  <th class="py-2.5 px-3">N° Ticket / Hora</th>
+                  <th class="py-2.5 px-3">Cliente</th>
+                  <th class="py-2.5 px-3">Pago</th>
+                  <th class="py-2.5 px-3 text-right">Total</th>
+                  <th class="py-2.5 px-2 text-center">Ver</th>
+                </tr>
+              </thead>
+              <tbody id="dash-recent-ops-tbody" class="divide-y divide-slate-100">
+                <!-- Se puebla dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ------------------------------------------------------------
+         4. TAB: PRECIOS, IVA Y ACTUALIZACIÓN MASIVA
+         ------------------------------------------------------------ -->
+    <section id="tab-precios" class="tab-content hidden space-y-4">
+      
+      <!-- Actualización Masiva de Precios -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <div class="flex items-center gap-2">
+          <div class="p-2 bg-amber-100 text-amber-700 rounded-lg font-bold">
+            <i data-lucide="percent" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800 text-base">Actualización Masiva de Precios por Porcentaje</h3>
+            <p class="text-xs text-slate-500">Aumentá o bajá precios de todo el negocio o por sector en un solo clic, con historial para volver atrás.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Aplicar a:</label>
+            <select id="bulk-price-scope" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm">
+              <option value="all">Todos los artículos del negocio</option>
+              <option value="family-buloneria">Solo Bulonería y Tornillos</option>
+              <option value="family-termofusion">Solo Termofusión y Caños</option>
+              <option value="family-herramientas">Solo Herramientas</option>
+              <option value="family-quimica">Solo Adhesivos y Pinturas</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo de cambio:</label>
+            <select id="bulk-price-type" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm">
+              <option value="costo">Aumentar Precio de Costo (+%)</option>
+              <option value="venta">Aumentar Precio de Venta Final (+%)</option>
+              <option value="margen">Modificar Margen de Ganancia (%)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Porcentaje (%):</label>
+            <div class="relative">
+              <input type="number" id="bulk-price-percent" value="10" step="0.5" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm font-bold text-center">
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">%</span>
+            </div>
+          </div>
+          <div class="flex items-end gap-2">
+            <button id="btn-preview-bulk-price" class="flex-1 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-sm font-bold shadow">
+              Previsualizar
+            </button>
+            <button id="btn-rollback-prices" class="py-2 px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-lg text-xs font-semibold" title="Deshacer último aumento">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabla de Previsualización antes de confirmar aumento masivo -->
+        <div id="bulk-price-preview-container" class="hidden border border-amber-200 bg-amber-50/40 rounded-xl p-3 space-y-3">
+          <div class="flex justify-between items-center text-xs font-bold text-amber-900">
+            <span>Previsualización del Aumento (<span id="bulk-preview-count">0</span> artículos afectados):</span>
+            <button id="btn-confirm-bulk-price" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg font-bold shadow">
+              Confirmar y Aplicar Aumento
+            </button>
+          </div>
+          <div class="max-h-48 overflow-y-auto bg-white rounded-lg border border-amber-200">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-amber-100/60 font-semibold text-amber-950">
+                <tr>
+                  <th class="p-2">Artículo</th>
+                  <th class="p-2 text-right">Precio Actual</th>
+                  <th class="p-2 text-right">Nuevo Precio</th>
+                  <th class="p-2 text-right">Diferencia</th>
+                </tr>
+              </thead>
+              <tbody id="bulk-price-preview-tbody" class="divide-y divide-amber-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calculadora Explicativa de IVA Argentino en Vivo -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+          <i data-lucide="calculator" class="w-4 h-4 text-brand-600"></i> Calculadora de Precios e IVA (Doble Vía)
+        </h3>
+        <p class="text-xs text-slate-500">Cambiá cualquier casillero y el sistema calcula los demás en tiempo real con redondeo a 2 decimales exactos.</p>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">1. Costo ($)</label>
+            <input type="number" id="calc-costo" value="1000" step="0.01" class="w-full p-2 bg-white border border-slate-300 rounded font-mono font-bold">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">2. Margen (%)</label>
+            <input type="number" id="calc-margen" value="50" step="1" class="w-full p-2 bg-white border border-slate-300 rounded font-mono font-bold">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">3. Neto sin IVA ($)</label>
+            <input type="number" id="calc-neto" value="1500" step="0.01" class="w-full p-2 bg-white border border-slate-300 rounded font-mono font-bold">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">4. IVA (%)</label>
+            <select id="calc-alicuota" class="w-full p-2 bg-white border border-slate-300 rounded font-bold">
+              <option value="21">21% (General)</option>
+              <option value="10.5">10.5% (Diferencial)</option>
+              <option value="27">27% (Servicios)</option>
+              <option value="0">0% (Exento)</option>
+            </select>
+          </div>
+          <div class="col-span-2 sm:col-span-1">
+            <label class="block font-bold text-brand-900 mb-1">5. Final c/IVA ($)</label>
+            <input type="number" id="calc-final" value="1815" step="0.01" class="w-full p-2 bg-emerald-50 border-2 border-emerald-500 rounded font-mono font-black text-emerald-800">
+          </div>
+        </div>
+
+        <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 leading-relaxed">
+          <span class="font-bold">Fórmula aplicada:</span> Costo ($1.000) + Margen 50% = Neto sin IVA ($1.500) | IVA 21% = $315 | <strong>Precio Final = $1.815,00</strong>.
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------
+         5. TAB: IMPRESIÓN DE ETIQUETAS QR
+         ------------------------------------------------------------ -->
+    <section id="tab-etiquetas" class="tab-content hidden space-y-4">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-slate-800 text-base">Generador de Etiquetas QR para Cajas y Estantes</h3>
+            <p class="text-xs text-slate-500">Imprimí hojas enteras en hojas A4 autoadhesivas o en impresoras térmicas de etiquetas.</p>
+          </div>
+          <button id="btn-trigger-print" class="bg-purple-600 hover:bg-purple-700 active:scale-95 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-1.5 shadow">
+            <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Ahora (Ctrl + P)
+          </button>
+        </div>
+
+        <!-- Filtros de etiquetas a imprimir -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">¿Qué deseas imprimir?</label>
+            <select id="labels-target-select" class="w-full bg-white border border-slate-300 rounded-md p-2 font-medium">
+              <option value="all-boxes">Todas las Cajas de productos</option>
+              <option value="all-shelves">Todos los Estantes del Mapa</option>
+              <option value="by-shelf">Solo Cajas de un Estante en particular</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Formato de Hoja:</label>
+            <select id="labels-format-select" class="w-full bg-white border border-slate-300 rounded-md p-2 font-medium">
+              <option value="a4-grid">Hoja A4 (Grilla de 24 etiquetas adhesivas 65x38mm)</option>
+              <option value="thermal">Rollo Térmico Individual (50x30mm o 60x40mm)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Información visible:</label>
+            <div class="flex items-center gap-3 pt-2">
+              <label class="flex items-center gap-1"><input type="checkbox" id="lbl-chk-name" checked> Nombre</label>
+              <label class="flex items-center gap-1"><input type="checkbox" id="lbl-chk-code" checked> Código</label>
+              <label class="flex items-center gap-1"><input type="checkbox" id="lbl-chk-shelf" checked> Estante</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vista previa de etiquetas -->
+        <div class="border border-slate-300 rounded-xl p-4 bg-slate-100 max-h-[500px] overflow-y-auto">
+          <div id="labels-preview-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <!-- Etiquetas generadas dinámicamente con canvas QRious -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------
+         6. TAB: IMPORTAR / EXPORTAR EXCEL
+         ------------------------------------------------------------ -->
+    <section id="tab-importar" class="tab-content hidden space-y-4">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-4">
+        
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-slate-800 text-base">Importación Masiva de Artículos (15.000 artículos)</h3>
+            <p class="text-xs text-slate-500">Cargá todo tu catálogo desde una planilla Excel (.xlsx) o archivo separado por comas (.csv).</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="btn-download-excel-template" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow">
+              <i data-lucide="download" class="w-4 h-4"></i> Descargar Plantilla Excel
+            </button>
+            <button id="btn-export-all-data" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow">
+              <i data-lucide="file-output" class="w-4 h-4"></i> Exportar Todo a Excel
+            </button>
+          </div>
+        </div>
+
+        <!-- Zona Drag & Drop para subir Excel -->
+        <div id="drop-zone" class="border-2 border-dashed border-brand-300 hover:border-brand-500 bg-brand-50/50 rounded-2xl p-8 text-center cursor-pointer transition-all">
+          <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="hidden">
+          <i data-lucide="upload-cloud" class="w-12 h-12 text-brand-600 mx-auto mb-2"></i>
+          <p class="font-bold text-slate-800 text-sm">Hacé clic aquí o arrastrá tu archivo Excel / CSV</p>
+          <p class="text-xs text-slate-500 mt-1">El sistema valida duplicados, alícuotas de IVA y asignaciones a cajas automáticamente.</p>
+        </div>
+
+        <!-- Barra de Progreso de Importación -->
+        <div id="import-progress-container" class="hidden space-y-2">
+          <div class="flex justify-between text-xs font-semibold text-slate-700">
+            <span id="import-progress-label">Procesando filas...</span>
+            <span id="import-progress-pct">0%</span>
+          </div>
+          <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+            <div id="import-progress-bar" class="bg-emerald-600 h-3 rounded-full transition-all duration-150" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Log o Resumen de Importación -->
+        <div id="import-summary-box" class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5"></div>
+
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------
+         7. TAB: CONFIGURACIÓN Y BASE DE DATOS
+         ------------------------------------------------------------ -->
+    <section id="tab-config" class="tab-content hidden space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- Tarjeta Conexión Supabase (Nube Gratuita) -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+          <div class="flex items-center gap-2">
+            <div class="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
+              <i data-lucide="database" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">Base de Datos en la Nube (Supabase)</h3>
+              <p class="text-xs text-slate-500">Para sincronizar en vivo la PC del mostrador y los celulares.</p>
+            </div>
+          </div>
+
+          <div class="space-y-2 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">URL de Supabase:</label>
+              <input type="text" id="cfg-supabase-url" placeholder="https://xyzcompany.supabase.co" class="w-full p-2 bg-slate-50 border border-slate-300 rounded font-mono">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">Clave Anónima Pública (Anon Key):</label>
+              <input type="password" id="cfg-supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6Ik..." class="w-full p-2 bg-slate-50 border border-slate-300 rounded font-mono">
+            </div>
+            <button id="btn-save-supabase-cfg" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow text-xs">
+              Conectar y Sincronizar con Supabase
+            </button>
+          </div>
+        </div>
+
+        <!-- Copias de Seguridad Locales (Backups) -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+          <div class="flex items-center gap-2">
+            <div class="p-2 bg-blue-100 text-blue-700 rounded-lg">
+              <i data-lucide="shield" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">Copias de Seguridad (Backup)</h3>
+              <p class="text-xs text-slate-500">Descargá una copia completa de tus 15.000 artículos y cajas en un clic.</p>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <button id="btn-download-backup" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 shadow">
+              <i data-lucide="download" class="w-4 h-4"></i> Descargar Copia de Seguridad Completa (JSON)
+            </button>
+
+            <label class="block w-full py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-lg font-semibold text-xs text-center cursor-pointer">
+              <i data-lucide="upload" class="w-4 h-4 inline-block mr-1"></i> Restaurar desde Copia de Seguridad
+              <input type="file" id="backup-file-input" accept=".json" class="hidden">
+            </label>
+          </div>
+        </div>
+
+        <!-- Tarjeta de Seguridad y Contraseñas de Usuarios -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+          <div class="flex items-center gap-2">
+            <div class="p-2 bg-amber-100 text-amber-700 rounded-lg">
+              <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">Cuentas y Contraseñas de Acceso</h3>
+              <p class="text-xs text-slate-500">Configurá las claves para el Administrador y los Empleados.</p>
+            </div>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Contraseña Administrador / Dueño (Usuario: <span class="font-mono text-brand-700 font-bold">admin</span>):</label>
+              <div class="flex gap-2">
+                <input type="text" id="cfg-owner-password" placeholder="admin" class="flex-1 p-2 bg-slate-50 border border-slate-300 rounded font-mono text-sm">
+                <button id="btn-save-owner-password" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded font-bold shadow text-xs">Guardar</button>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-0.5">Por defecto: <strong>admin</strong> (o 1234). Acceso total a costos, márgenes y edición del plano.</p>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100">
+              <label class="block font-semibold text-slate-700 mb-1">Contraseña Empleados (Usuario: <span class="font-mono text-cyan-700 font-bold">empleado</span>):</label>
+              <div class="flex gap-2">
+                <input type="text" id="cfg-employee-password" placeholder="123" class="flex-1 p-2 bg-slate-50 border border-slate-300 rounded font-mono text-sm">
+                <button id="btn-save-employee-password" class="px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-bold shadow text-xs">Guardar</button>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-0.5">Por defecto: <strong>123</strong>. Dejá el campo vacío si querés que entren sin contraseña.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       MODALES Y PANELES LATERALES
+       ============================================================ -->
+
+  <!-- Panel Lateral / Modal de Estante (Al tocar un estante en el mapa) -->
+  <div id="shelf-drawer" class="fixed inset-0 z-50 pointer-events-none transition-opacity duration-300 opacity-0 flex justify-end hidden">
+    <!-- Overlay oscuro de fondo -->
+    <div id="shelf-drawer-overlay" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm pointer-events-auto"></div>
+
+    <!-- Contenido del Drawer -->
+    <div class="relative w-full max-w-md bg-white h-full shadow-2xl pointer-events-auto flex flex-col z-10">
+      
+      <!-- Cabecera del Estante -->
+      <div class="p-4 bg-brand-900 text-white flex items-center justify-between border-b border-brand-800">
+        <div>
+          <span id="drawer-shelf-code" class="text-xs font-mono font-bold bg-brand-800 px-2 py-0.5 rounded text-amber-300">EST-01</span>
+          <h2 id="drawer-shelf-name" class="font-bold text-lg leading-tight mt-1">Estante Superior</h2>
+          <p id="drawer-shelf-type" class="text-xs text-brand-200">Sector de almacenamiento</p>
+        </div>
+        <button id="btn-close-shelf-drawer" class="p-2 text-white/80 hover:text-white rounded-lg hover:bg-white/10">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <!-- Buscador interno en el estante -->
+      <div class="p-3 bg-slate-50 border-b border-slate-200">
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input type="text" id="shelf-internal-search" placeholder="Filtrar artículos dentro de este estante..." 
+                 class="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-500">
+        </div>
+      </div>
+
+      <!-- Lista de Cajas del Estante -->
+      <div id="drawer-boxes-list" class="flex-1 overflow-y-auto p-3 space-y-3">
+        <!-- Se puebla dinámicamente con las cajas de este estante -->
+      </div>
+
+      <!-- Pie del Drawer con botones de acción -->
+      <div class="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
+        <button id="btn-drawer-add-box" class="flex-1 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 shadow">
+          <i data-lucide="plus" class="w-4 h-4"></i> Asignar Caja a este Estante
+        </button>
+        <button id="btn-drawer-print-shelf-qr" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow" title="Imprimir QR del Estante">
+          <i data-lucide="printer" class="w-4 h-4"></i> QR Estante
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal Detalle de Caja (Al escanear QR de caja o tocar en la lista) -->
+  <div id="box-detail-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 bg-slate-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in duration-200">
+      
+      <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div id="modal-box-qr-canvas-wrapper" class="w-10 h-10 bg-white p-1 rounded-lg flex items-center justify-center shadow"></div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="modal-box-code" class="text-xs font-mono font-bold bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded">CAJA-0001</span>
+              <span id="modal-box-shelf-badge" class="text-xs bg-slate-800 text-emerald-300 font-semibold px-2 py-0.5 rounded">Estante: EST-04</span>
+            </div>
+            <h3 id="modal-box-name" class="font-bold text-base mt-0.5">Bulones Hexagonales 1/4</h3>
+          </div>
+        </div>
+        <button id="btn-close-box-modal" class="p-1.5 text-slate-400 hover:text-white rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Contenido de artículos en la caja -->
+      <div class="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center text-xs">
+        <span class="font-bold text-slate-700">Artículos contenidos en esta caja:</span>
+        <button id="btn-box-locate-map" class="text-brand-600 hover:text-brand-800 font-bold flex items-center gap-1">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Ver en el Mapa
+        </button>
+      </div>
+
+      <div id="modal-box-articles-list" class="flex-1 overflow-y-auto p-4 space-y-3">
+        <!-- Lista de artículos con botones +/- de stock rápido -->
+      </div>
+
+      <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-between gap-2">
+        <button id="btn-box-print-label" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold flex items-center gap-1">
+          <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Etiqueta QR
+        </button>
+        <button id="btn-box-add-item" class="px-3 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-xs font-bold flex items-center gap-1">
+          <i data-lucide="plus" class="w-4 h-4"></i> Agregar Artículo a esta Caja
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal Escáner de Cámara (Html5-Qrcode) -->
+  <div id="scanner-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-md">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col">
+      <div class="p-3.5 bg-slate-900 text-white flex items-center justify-between">
+        <h3 class="font-bold text-sm flex items-center gap-2">
+          <i data-lucide="scan-line" class="w-4 h-4 text-amber-400"></i> Escanear Código QR o Barra (EAN)
+        </h3>
+        <button id="btn-close-scanner" class="p-1.5 text-slate-400 hover:text-white rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-4 bg-slate-950 flex flex-col items-center justify-center">
+        <!-- Elemento donde la cámara proyecta -->
+        <div id="camera-reader" class="w-full max-w-[320px] h-[280px] rounded-xl overflow-hidden bg-black border-2 border-amber-400"></div>
+        <p class="text-xs text-slate-400 mt-2 text-center">Apuntá la cámara a la etiqueta QR de una caja o al código de barras del producto.</p>
+      </div>
+
+      <!-- Entrada manual de respaldo -->
+      <div class="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
+        <input type="text" id="manual-scan-input" placeholder="O escribí el código manual..." class="flex-1 p-2 bg-white border border-slate-300 rounded text-xs font-mono">
+        <button id="btn-submit-manual-scan" class="px-3 py-2 bg-brand-700 text-white text-xs font-bold rounded">Buscar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Comprobante de Venta Térmico / WhatsApp -->
+  <div id="receipt-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="p-3.5 bg-slate-900 text-white flex justify-between items-center">
+        <h3 class="font-bold text-sm">Comprobante de Operación</h3>
+        <button id="btn-close-receipt" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <!-- Papel del Ticket -->
+      <div class="flex-1 overflow-y-auto p-4 bg-slate-100 flex justify-center">
+        <div id="receipt-printable-content" class="receipt-paper shadow-sm">
+          <!-- Se formatea dinámicamente con JavaScript -->
+        </div>
+      </div>
+
+      <div class="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
+        <button id="btn-print-receipt-paper" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow">
+          <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Ticket
+        </button>
+        <button id="btn-share-whatsapp" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow">
+          <i data-lucide="message-circle" class="w-4 h-4"></i> WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Inicio de Sesión Normal (Usuario y Contraseña) -->
+  <div id="login-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden flex flex-col border border-slate-200">
+      
+      <!-- Cabecera del Login -->
+      <div class="p-5 bg-brand-900 text-white text-center relative">
+        <button type="button" id="btn-close-login-modal" class="absolute right-3.5 top-3.5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+        <div class="w-12 h-12 bg-amber-400 text-brand-950 rounded-2xl mx-auto flex items-center justify-center font-black text-2xl shadow-lg mb-2">
+          <i data-lucide="user-check" class="w-6 h-6"></i>
+        </div>
+        <h3 class="font-bold text-lg leading-tight">Iniciar Sesión</h3>
+        <p class="text-xs text-brand-200 mt-0.5">Ferretería El Tornillo</p>
+      </div>
+
+      <!-- Formulario de Login Tradicional -->
+      <form id="form-normal-login" class="p-5 space-y-4" onsubmit="return false;">
+        
+        <!-- Campo Usuario -->
+        <div>
+          <label for="login-username-input" class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Usuario:</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input type="text" id="login-username-input" placeholder="admin o empleado" autocomplete="username"
+                   class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200 focus:outline-none transition-all">
+          </div>
+          <!-- Botoncitos de selección rápida -->
+          <div class="flex items-center gap-2 mt-1.5 text-[11px]">
+            <span class="text-slate-400 font-medium">Acceso rápido:</span>
+            <button type="button" class="btn-quick-user px-2 py-0.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 border border-slate-200 rounded text-slate-600 font-semibold transition-colors" data-user="admin">admin</button>
+            <button type="button" class="btn-quick-user px-2 py-0.5 bg-slate-100 hover:bg-cyan-100 hover:text-cyan-900 border border-slate-200 rounded text-slate-600 font-semibold transition-colors" data-user="empleado">empleado</button>
+          </div>
+        </div>
+
+        <!-- Campo Contraseña -->
+        <div>
+          <label for="login-password-input" class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Contraseña:</label>
+          <div class="relative">
+            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input type="password" id="login-password-input" placeholder="Ingresá tu contraseña" autocomplete="current-password"
+                   class="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200 focus:outline-none transition-all">
+            <button type="button" id="btn-toggle-login-pwd" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1" title="Ver contraseña">
+              <i data-lucide="eye" id="icon-login-pwd-eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <p id="login-hint-text" class="text-[11px] text-slate-400 mt-1">Clave inicial: <strong>admin</strong> (Dueño) o <strong>123</strong> (Empleado)</p>
+          <p id="login-error-msg" class="hidden text-xs text-rose-600 font-semibold mt-1.5 text-center bg-rose-50 p-2 rounded-lg border border-rose-200"></p>
+        </div>
+
+        <!-- Botón Iniciar Sesión -->
+        <button type="button" id="btn-submit-login" class="w-full py-2.5 bg-brand-700 hover:bg-brand-800 active:bg-brand-900 text-white rounded-xl shadow-md font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer">
+          <i data-lucide="log-in" class="w-4 h-4"></i> Iniciar Sesión
+        </button>
+
+        <!-- Opción Consulta Libre -->
+        <div class="border-t border-slate-100 pt-3 text-center">
+          <button type="button" id="btn-login-guest" class="text-xs text-slate-500 hover:text-brand-700 font-medium flex items-center justify-center gap-1 mx-auto transition-colors cursor-pointer">
+            <i data-lucide="eye" class="w-3.5 h-3.5"></i> Entrar como Invitado / Solo Consulta
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- Modal Nuevo / Editar Artículo -->
+  <div id="article-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col border border-slate-200 max-h-[95vh]">
+      
+      <!-- Cabecera del Modal -->
+      <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
+        <h3 id="article-modal-title" class="font-bold text-base flex items-center gap-2">
+          <i data-lucide="plus-circle" class="w-5 h-5 text-emerald-400"></i> Nuevo Artículo
+        </h3>
+        <button type="button" id="btn-close-article-modal" class="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Formulario de Artículo con Scroll -->
+      <form id="form-new-article" class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+        
+        <!-- Nombre y Medida -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block font-bold text-slate-700 uppercase mb-1">Nombre del Artículo *</label>
+            <input type="text" id="art-input-name" required placeholder="Ej: Bulón Cabeza Hexagonal Acero" 
+                   class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase mb-1">Medida / Variante *</label>
+            <input type="text" id="art-input-variant" required placeholder="Ej: 1/4 x 2 pulgadas o 20mm" 
+                   class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase mb-1">Familia / Rubro</label>
+            <select id="art-input-family" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <option value="Bulonería y Tornillos">Bulonería y Tornillos</option>
+              <option value="Termofusión y Caños">Termofusión y Caños</option>
+              <option value="Fijaciones y Tarugos">Fijaciones y Tarugos</option>
+              <option value="Herramientas y Abrasivos">Herramientas y Abrasivos</option>
+              <option value="Electricidad e Iluminación">Electricidad e Iluminación</option>
+              <option value="Plomería y Grifería">Plomería y Grifería</option>
+              <option value="Pinturería y Selladores">Pinturería y Selladores</option>
+              <option value="Varios y General">Varios y General</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Códigos y Unidad -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 uppercase mb-1">Código Interno</label>
+            <input type="text" id="art-input-code" placeholder="Auto-generado si está vacío" 
+                   class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono uppercase focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase mb-1">Código de Barras / EAN</label>
+            <input type="text" id="art-input-barcode" placeholder="Opcional (779...)" 
+                   class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase mb-1">Unidad de Medida</label>
+            <select id="art-input-unit" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <option value="unid">Unidad (unid)</option>
+              <option value="metro">Metro (m)</option>
+              <option value="rollo">Rollo</option>
+              <option value="kg">Kilogramo (kg)</option>
+              <option value="juego">Juego / Set</option>
+              <option value="caja">Caja cerrada</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Precios, Margen e IVA -->
+        <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-3.5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-950 uppercase text-[11px] flex items-center gap-1.5">
+              <i data-lucide="calculator" class="w-4 h-4 text-amber-600"></i> Costo, Margen y Precio de Venta
+            </span>
+            <span class="text-[10px] text-amber-700 font-semibold">Cálculo en vivo</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2.5">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Costo s/IVA ($):</label>
+              <input type="number" id="art-input-cost" step="0.01" min="0" value="100" 
+                     class="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-sm text-slate-800">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Margen (%):</label>
+              <input type="number" id="art-input-margin" step="1" min="0" value="60" 
+                     class="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-sm text-slate-800">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Alícuota IVA:</label>
+              <select id="art-input-iva" class="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-sm text-slate-800">
+                <option value="21">21% (Estándar)</option>
+                <option value="10.5">10.5% (Diferencial)</option>
+                <option value="0">0% (Exento)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Cuadro de Precio Calculado -->
+          <div class="bg-white p-3 rounded-lg border border-amber-300 flex items-center justify-between">
+            <div>
+              <div class="text-[10px] uppercase font-bold text-slate-400">Precio de Venta Final (con IVA):</div>
+              <div id="art-preview-final-price" class="text-2xl font-black font-mono text-emerald-700">$193,60</div>
+            </div>
+            <div class="text-right text-[11px] text-slate-500 font-mono">
+              <div>Neto: <span id="art-preview-neto" class="font-bold text-slate-800">$160,00</span></div>
+              <div>IVA: <span id="art-preview-iva-monto" class="font-bold text-slate-800">$33,60</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stock y Asignación de Caja -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 uppercase mb-1">Stock Inicial</label>
+            <input type="number" id="art-input-initial-stock" min="0" value="50" 
+                   class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-sm text-slate-800">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase mb-1">Stock Mínimo</label>
+            <input type="number" id="art-input-min-stock" min="0" value="20" 
+                   class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-sm text-slate-800">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 uppercase mb-1">Asignar a Caja</label>
+            <select id="art-input-box" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <option value="">-- Sin caja por ahora --</option>
+              <!-- Llenado dinámico con cajas existentes -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Mensaje de Error / Feedback -->
+        <div id="art-modal-error" class="hidden p-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg font-semibold text-center text-xs"></div>
+
+        <!-- Botones de Acción -->
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+          <button type="button" id="btn-cancel-article-modal" class="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-save-new-article" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl shadow-md flex items-center gap-1.5 transition-all">
+            <i data-lucide="check" class="w-4 h-4"></i> Guardar Artículo
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+  <!-- Área de Impresión Oculta (Usada solo por window.print) -->
+  <div id="print-area"></div>
+
+  <!-- Scripts de la Aplicación -->
+  <script src="app.js"></script>
+</body>
+</html>

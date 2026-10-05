@@ -1,0 +1,41 @@
+================================================================================
+SISTEMA DE CONTROL DE STOCK, MAPA INTERACTIVO Y VENTAS - FERRETERÍA ARGENTINA
+================================================================================
+
+¡HOLA! Tu sistema ya está completamente listo en esta carpeta.
+No necesitás instalar programas raros ni saber programar.
+
+¿CÓMO USARLO AHORA MISMO EN TU COMPUTADORA?
+1. Hacé doble clic en el archivo "index.html".
+2. Se abrirá automáticamente en tu navegador (Google Chrome, Microsoft Edge, etc.).
+3. ¡Listo! Ya podés ver el plano interactivo de tu local, hacer clic en los estantes,
+   escanear códigos con la cámara, simular ventas en el mostrador e imprimir tickets o etiquetas.
+
+ARCHIVOS INCLUIDOS EN ESTA CARPETA:
+- index.html: La pantalla y diseño completo del sistema (para PC y celular).
+- app.js: Toda la inteligencia (el mapa interactivo, cálculos de IVA, carrito y QR).
+- styles.css: El diseño visual, colores de estantes, animaciones y formato de impresión.
+- supabase-schema.sql: El script para conectar tu base de datos gratuita en la nube.
+- plantilla_inventario_ferreteria.csv: La planilla modelo con ejemplos reales de bulonería,
+  plomería, electricidad y herramientas para importar tus 15.000 artículos.
+
+¿CÓMO USARLO DESDE EL CELULAR?
+1. Estando en el mismo Wi-Fi del local, podés compartir la carpeta o subirla gratis a
+   Netlify / Vercel (en la guía que te dejé en el chat tenés los 4 pasos exactos).
+2. Desde el celular abrís la dirección web, tocás el botón "Escanear" y apuntás la cámara
+   a las etiquetas QR de las cajas para ver el stock en segundos.
+
+USUARIOS Y CONTRASEÑAS POR DEFECTO:
+1. Administrador / Dueño (acceso total a costos, márgenes, edición del local y precios):
+   - Usuario: admin
+   - Contraseña: admin (o 1234)
+
+2. Empleado / Vendedor (mostrador, ventas y movimientos de stock sin ver costos):
+   - Usuario: empleado
+   - Contraseña: 123 (o empleado)
+
+3. Consulta / Invitado:
+   - Podés hacer clic en "Entrar como Invitado" sin contraseña para solo consultar cajas y mapa.
+
+* Podés cambiar las contraseñas en cualquier momento desde la pestaña "Configuración".
+================================================================================
