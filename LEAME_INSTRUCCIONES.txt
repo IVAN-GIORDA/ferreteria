@@ -8,22 +8,31 @@ No necesitás instalar programas raros ni saber programar.
 ¿CÓMO USARLO AHORA MISMO EN TU COMPUTADORA?
 1. Hacé doble clic en el archivo "index.html".
 2. Se abrirá automáticamente en tu navegador (Google Chrome, Microsoft Edge, etc.).
-3. ¡Listo! Ya podés ver el plano interactivo de tu local, hacer clic en los estantes,
-   escanear códigos con la cámara, simular ventas en el mostrador e imprimir tickets o etiquetas.
+3. ¡Listo! Ya podés ver el plano interactivo de tu local, cargar tus artículos,
+   gestionar ventas, ver el dashboard de rendimiento y exportar a Excel.
 
-ARCHIVOS INCLUIDOS EN ESTA CARPETA:
-- index.html: La pantalla y diseño completo del sistema (para PC y celular).
-- app.js: Toda la inteligencia (el mapa interactivo, cálculos de IVA, carrito y QR).
-- styles.css: El diseño visual, colores de estantes, animaciones y formato de impresión.
-- supabase-schema.sql: El script para conectar tu base de datos gratuita en la nube.
-- plantilla_inventario_ferreteria.csv: La planilla modelo con ejemplos reales de bulonería,
-  plomería, electricidad y herramientas para importar tus 15.000 artículos.
+NOVEDADES Y FUNCIONES CLAVE:
+1. Catálogo Limpio desde Cero:
+   - Ya no hay artículos de demostración pre-cargados. El inventario empieza vacío
+     para que cargues tus propios productos sin mezclar datos de prueba.
+   - Botón "Nuevo Artículo": ahora abre un formulario completo con cálculo de precio
+     en vivo (Costo + Margen % + IVA = Precio Final), código de barras y asignación a caja.
 
-¿CÓMO USARLO DESDE EL CELULAR?
-1. Estando en el mismo Wi-Fi del local, podés compartir la carpeta o subirla gratis a
-   Netlify / Vercel (en la guía que te dejé en el chat tenés los 4 pasos exactos).
-2. Desde el celular abrís la dirección web, tocás el botón "Escanear" y apuntás la cámara
-   a las etiquetas QR de las cajas para ver el stock en segundos.
+2. Dashboard de Ventas & Reportes:
+   - Pestaña "Dashboard Ventas" con métricas en tiempo real:
+     • Facturación total y cantidad de tickets.
+     • Ticket promedio.
+     • Ganancia neta estimada (solo visible para perfil Dueño).
+     • Unidades vendidas y presupuestos pendientes.
+     • Desglose por métodos de pago (Efectivo, Débito, Transferencia, Crédito, Cta Cte).
+     • Gráfico interactivo de evolución diaria de ventas.
+     • Ranking Top 10 artículos más vendidos.
+     • Últimas operaciones con botón para ver/reimprimir comprobante.
+
+3. Importación y Descarga de Excel (.xlsx / .csv):
+   - "Descargar Ventas a Excel": exporta todo el detalle de ventas, clientes, medios de pago y montos.
+   - "Plantilla Artículos": descarga la planilla modelo con las columnas listas.
+   - "Importar Excel": podés arrastrar tu archivo Excel o CSV para cargar miles de artículos de una sola vez.
 
 USUARIOS Y CONTRASEÑAS POR DEFECTO:
 1. Administrador / Dueño (acceso total a costos, márgenes, edición del local y precios):
@@ -35,7 +44,7 @@ USUARIOS Y CONTRASEÑAS POR DEFECTO:
    - Contraseña: 123 (o empleado)
 
 3. Consulta / Invitado:
-   - Podés hacer clic en "Entrar como Invitado" sin contraseña para solo consultar cajas y mapa.
+   - Podés hacer clic en "Entrar como Invitado" sin contraseña para consultar cajas y mapa.
 
 * Podés cambiar las contraseñas en cualquier momento desde la pestaña "Configuración".
 ================================================================================
